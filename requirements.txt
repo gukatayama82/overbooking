@@ -1,0 +1,6 @@
+flask
+requests
+icalendar
+python-dotenv
+python-dateutil
+gunicorn

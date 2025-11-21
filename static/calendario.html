@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calendário de Reservas</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f3f3;
+            padding: 20px;
+        }
+
+        #calendar {
+            max-width: 900px;
+            margin: 40px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.15);
+        }
+
+        .legend {
+            max-width: 900px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            gap: 20px;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .airbnb { background: #FF5A5F; }
+        .booking { background: #003580; }
+
+        #status-box {
+            max-width: 900px;
+            margin: 20px auto;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h2 style="text-align:center;">📅 Calendário de Reservas</h2>
+
+    <div class="legend">
+        <span class="badge airbnb">Airbnb</span>
+        <span class="badge booking">Booking</span>
+    </div>
+
+    <div id="status-box">Carregando status...</div>
+
+    <div id="calendar"></div>
+
+    <script>
+        async function carregarDados() {
+            const response = await fetch("/overbooking");
+            return await response.json();
+        }
+
+        document.addEventListener("DOMContentLoaded", async function () {
+            const data = await carregarDados();
+
+            // ⚠ Destacar status geral
+            const statusBox = document.getElementById("status-box");
+
+            if (data.overbooking) {
+                statusBox.innerHTML = "⚠️ Conflito detectado!";
+                statusBox.style.color = "red";
+            } else {
+                statusBox.innerHTML = "✅ Nenhum conflito encontrado";
+                statusBox.style.color = "green";
+            }
+
+            // Criar lista de eventos
+            const eventos = [];
+
+            // Reservas normais
+            for (const origem in data.reservas) {
+                const cor = origem === "Airbnb" ? "#FF5A5F" : "#003580";
+
+                data.reservas[origem].forEach(r => {
+                    eventos.push({
+                        title: origem,
+                        start: r.start,
+                        end: r.end,
+                        backgroundColor: cor,
+                        borderColor: cor,
+                        extendedProps: { source: origem }
+                    });
+                });
+            }
+
+            // Se houver conflitos → destacar
+            if (data.overbooking) {
+                data.conflicts.forEach(conf => {
+                    // EVENTO 1 destacado
+                    eventos.push({
+                        title: "⚠ Conflito (" + conf.event1.source + ")",
+                        start: conf.event1.start,
+                        end: conf.event1.end,
+                        backgroundColor: "yellow",
+                        borderColor: "red",
+                        textColor: "black"
+                    });
+
+                    // EVENTO 2 destacado
+                    eventos.push({
+                        title: "⚠ Conflito (" + conf.event2.source + ")",
+                        start: conf.event2.start,
+                        end: conf.event2.end,
+                        backgroundColor: "yellow",
+                        borderColor: "red",
+                        textColor: "black"
+                    });
+                });
+            }
+
+            // Monta o calendário
+            const calendarEl = document.getElementById("calendar");
+
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: "dayGridMonth",
+                locale: "pt-br",
+                events: eventos,
+                eventDisplay: "block"
+            });
+
+            calendar.render();
+        });
+    </script>
+
+</body>
+</html>
